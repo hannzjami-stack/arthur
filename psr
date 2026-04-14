@@ -1,0 +1,287 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- SETTINGS
+local AimEnabled = false
+local VisualsEnabled = false
+local MenuVisible = false
+local IsUnlocked = false
+local IsViewingTarget = false
+local HeightOffset = Vector3.new(0, 1.5, 0)
+local CurrentTarget = nil 
+local AimFOV = 150 
+
+-- (Base64 Decoder)
+local EncodedKey = "YXJ0aHVy" --
+local function Decode(data)
+    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    data = string.gsub(data, '[^'..b..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r, f = '', (b:find(x) - 1)
+        for i = 6, 1, -1 do r = r..(f % 2^i - f % 2^(i - 1) > 0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d%d%d%d%d%d', function(x)
+        return string.char(tonumber(x, 2))
+    end))
+end
+
+-- CREATE UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Arthur_Elite_V4"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- LOGIN SYSTEM
+local LoginContainer = Instance.new("Frame", ScreenGui)
+LoginContainer.Name = "LoginContainer"
+LoginContainer.Size = UDim2.new(1, 0, 1, 0)
+LoginContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+LoginContainer.BackgroundTransparency = 0.2
+LoginContainer.ZIndex = 10
+
+local LoginPanel = Instance.new("Frame", LoginContainer)
+LoginPanel.Size = UDim2.new(0, 300, 0, 180)
+LoginPanel.Position = UDim2.new(0.5, -150, 0.5, -90)
+LoginPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+
+local PanelStroke = Instance.new("UIStroke", LoginPanel)
+PanelStroke.Color = Color3.fromRGB(255, 120, 0)
+PanelStroke.Thickness = 2
+
+local LoginTitle = Instance.new("TextLabel", LoginPanel)
+LoginTitle.Text = "SYSTEM AUTHENTICATION"
+LoginTitle.Size = UDim2.new(1, 0, 0, 40)
+LoginTitle.BackgroundTransparency = 1
+LoginTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoginTitle.Font = Enum.Font.SourceSansBold
+LoginTitle.TextSize = 20
+
+local PassBox = Instance.new("TextBox", LoginPanel)
+PassBox.Size = UDim2.new(0, 240, 0, 40)
+PassBox.Position = UDim2.new(0.5, -120, 0.45, 0)
+PassBox.PlaceholderText = "Enter Key..."
+PassBox.Text = ""
+PassBox.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+PassBox.TextColor3 = Color3.new(1, 1, 1)
+PassBox.Font = Enum.Font.SourceSans
+PassBox.TextSize = 18
+
+local StatusLabel = Instance.new("TextLabel", LoginPanel)
+StatusLabel.Text = "Restricted Access"
+StatusLabel.Position = UDim2.new(0, 0, 0.75, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0, 20)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+
+-- MAIN MODERN FRAME
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 400, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 120, 0)
+MainStroke.Thickness = 2
+
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 100, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Sidebar.BorderSizePixel = 0
+
+local MainTabBtn = Instance.new("TextButton", Sidebar)
+MainTabBtn.Text = "MAIN"
+MainTabBtn.Size = UDim2.new(1, 0, 0, 50)
+MainTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainTabBtn.TextColor3 = Color3.new(1, 1, 1)
+MainTabBtn.BorderSizePixel = 0
+
+local PlayerTabBtn = Instance.new("TextButton", Sidebar)
+PlayerTabBtn.Text = "PLAYERS"
+PlayerTabBtn.Position = UDim2.new(0, 0, 0, 50)
+PlayerTabBtn.Size = UDim2.new(1, 0, 0, 50)
+PlayerTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+PlayerTabBtn.TextColor3 = Color3.new(1, 1, 1)
+PlayerTabBtn.BorderSizePixel = 0
+
+local Pages = Instance.new("Frame", MainFrame)
+Pages.Size = UDim2.new(1, -110, 1, -10)
+Pages.Position = UDim2.new(0, 105, 0, 5)
+Pages.BackgroundTransparency = 1
+
+local MainPage = Instance.new("Frame", Pages)
+MainPage.Size = UDim2.new(1, 0, 1, 0)
+MainPage.BackgroundTransparency = 1
+MainPage.Visible = true
+
+local ToggleBtn = Instance.new("TextButton", MainPage)
+ToggleBtn.Text = "AIMBOT: OFF"
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.1, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local VisualBtn = Instance.new("TextButton", MainPage)
+VisualBtn.Text = "WALL ESP: OFF"
+VisualBtn.Size = UDim2.new(0.9, 0, 0, 40)
+VisualBtn.Position = UDim2.new(0.05, 0, 0.3, 0)
+VisualBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+VisualBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local PlayerPage = Instance.new("Frame", Pages)
+PlayerPage.Size = UDim2.new(1, 0, 1, 0)
+PlayerPage.BackgroundTransparency = 1
+PlayerPage.Visible = false
+
+local ScrollList = Instance.new("ScrollingFrame", PlayerPage)
+ScrollList.Size = UDim2.new(1, 0, 0.8, 0)
+ScrollList.BackgroundTransparency = 1
+ScrollList.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollList.ScrollBarThickness = 3
+
+local UIListLayout = Instance.new("UIListLayout", ScrollList)
+UIListLayout.Padding = UDim.new(0, 5)
+
+local ResetCamBtn = Instance.new("TextButton", PlayerPage)
+ResetCamBtn.Text = "RESET VIEW (OR PRESS J)"
+ResetCamBtn.Size = UDim2.new(1, 0, 0, 30)
+ResetCamBtn.Position = UDim2.new(0, 0, 0.85, 0)
+ResetCamBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+ResetCamBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- UPDATED LOGIN LOGIC (SECURED)
+PassBox.FocusLost:Connect(function(enter)
+    if enter then
+        if PassBox.Text == Decode(EncodedKey) then
+            IsUnlocked = true
+            StatusLabel.Text = "ACCESS GRANTED"
+            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            task.wait(0.5)
+            LoginContainer:Destroy()
+            MainFrame.Visible = true
+            MenuVisible = true
+        else
+            PassBox.Text = ""
+            StatusLabel.Text = "INVALID KEY"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        end
+    end
+end)
+
+-- PAGE SWITCHING LOGIC
+MainTabBtn.MouseButton1Click:Connect(function()
+    MainPage.Visible = true
+    PlayerPage.Visible = false
+    MainTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    PlayerTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+end)
+
+PlayerTabBtn.MouseButton1Click:Connect(function()
+    MainPage.Visible = false
+    PlayerPage.Visible = true
+    MainTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    PlayerTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    
+    for _, c in pairs(ScrollList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local b = Instance.new("TextButton", ScrollList)
+            b.Size = UDim2.new(1, -10, 0, 30)
+            b.Text = p.DisplayName
+            b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            b.TextColor3 = Color3.new(1, 1, 1)
+            b.MouseButton1Click:Connect(function()
+                if p.Character and p.Character:FindFirstChild("Humanoid") then
+                    Camera.CameraSubject = p.Character.Humanoid
+                    IsViewingTarget = true
+                end
+            end)
+        end
+    end
+    ScrollList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end)
+
+-- BUTTON ACTIONS
+ToggleBtn.MouseButton1Click:Connect(function()
+    AimEnabled = not AimEnabled
+    ToggleBtn.Text = AimEnabled and "AIMBOT: ON" or "AIMBOT: OFF"
+    ToggleBtn.BackgroundColor3 = AimEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+end)
+
+VisualBtn.MouseButton1Click:Connect(function()
+    VisualsEnabled = not VisualsEnabled
+    VisualBtn.Text = VisualsEnabled and "WALL ESP: ON" or "WALL ESP: OFF"
+    VisualBtn.BackgroundColor3 = VisualsEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+end)
+
+ResetCamBtn.MouseButton1Click:Connect(function()
+    Camera.CameraSubject = LocalPlayer.Character.Humanoid
+    IsViewingTarget = false
+end)
+
+UserInputService.InputBegan:Connect(function(i, g)
+    if not g and i.KeyCode == Enum.KeyCode.K and IsUnlocked then
+        MenuVisible = not MenuVisible
+        MainFrame.Visible = MenuVisible
+    elseif not g and i.KeyCode == Enum.KeyCode.J then
+        Camera.CameraSubject = LocalPlayer.Character.Humanoid
+        IsViewingTarget = false
+    end
+end)
+
+-- RENDER LOOP
+RunService.RenderStepped:Connect(function()
+    if not IsUnlocked then return end
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local hl = p.Character:FindFirstChild("Arthur_Highlight")
+            if VisualsEnabled then
+                if not hl then
+                    hl = Instance.new("Highlight", p.Character)
+                    hl.Name = "Arthur_Highlight"
+                end
+                hl.Enabled = true
+                hl.FillColor = Color3.fromRGB(255, 140, 0)
+            else
+                if hl then hl.Enabled = false end
+            end
+        end
+    end
+
+    if IsViewingTarget then
+        local subject = Camera.CameraSubject
+        if not subject or not subject.Parent or (subject:IsA("Humanoid") and subject.Health <= 0) then
+            Camera.CameraSubject = LocalPlayer.Character.Humanoid
+            IsViewingTarget = false
+        end
+    end
+
+    if AimEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        if not CurrentTarget then
+            local dist = AimFOV
+            local mouse = UserInputService:GetMouseLocation()
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character.Humanoid.Health > 0 then
+                    local pos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                    if onScreen then
+                        local mag = (Vector2.new(pos.X, pos.Y) - mouse).Magnitude
+                        if mag < dist then dist = mag CurrentTarget = v end
+                    end
+                end
+            end
+        end
+        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, CurrentTarget.Character.Head.Position + HeightOffset)
+        end
+    else
+        CurrentTarget = nil
+    end
+end)
